@@ -1,7 +1,9 @@
 package firsov.study.securitySpring.controller;
 
 import firsov.study.securitySpring.dto.UserDTO;
+import firsov.study.securitySpring.exception.SendEmailException;
 import firsov.study.securitySpring.exception.UserAlreadyExistException;
+import firsov.study.securitySpring.exception.UserNotFoundException;
 import firsov.study.securitySpring.model.Permission;
 import firsov.study.securitySpring.model.Role;
 import firsov.study.securitySpring.model.User;
@@ -21,9 +23,11 @@ import org.springframework.validation.Errors;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -70,18 +74,30 @@ public class IndexController {
 
         try {
             User registered = userService.registerNewUserAccount(userDto);
-
-            List<Permission> privileges = registered.getRole().getPermissions().stream().toList();
-            List<GrantedAuthority> authorities = privileges.stream()
-                    .map(p -> new SimpleGrantedAuthority(p.getPermission()))
-                    .collect(Collectors.toList());
-            Authentication authentication = new UsernamePasswordAuthenticationToken(registered, null, authorities);
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-
         } catch (UserAlreadyExistException uaeEx) {
             model.addAttribute("message", "An account for that username/email already exists.");
             return "registration";
         }
         return "redirect:/success";
+    }
+
+    @GetMapping("/forgetPassword")
+    public String forgetPassword() {
+        return "forgetPassword";
+    }
+
+    @PostMapping("/forgetPassword")
+    public String processForgetPswd(@NotNull @RequestParam("email") String userEmail,  Model model) {
+        try {
+            userService.generateToken(userEmail);
+        }  catch (UserNotFoundException e) {
+            model.addAttribute("message", "An account for that email not exists.");
+            return "forgetPassword";
+        }
+//        catch (SendEmailException e) {
+//            model.addAttribute("message", "Try a bit later!");
+//        }
+        model.addAttribute("message", "Check your email!");
+        return "forgetPassword";
     }
 }
