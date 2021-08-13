@@ -27,6 +27,9 @@ public class UserService {
     PasswordEncoder passwordEncoder;
 
     @Autowired
+    EmailService emailService;
+
+    @Autowired
     UserRepository userRepository;
 
     @Autowired
@@ -69,7 +72,9 @@ public class UserService {
         PasswordResetToken myToken = new PasswordResetToken(token, userRepository.findByEmail(userEmail).get());
         tokenRepo.save(myToken);
 
-        // mailSender send token (token,email);
+        String msg = "Hello! You can change your password with this link! " +
+                "localhost:8084/changePassword?token=" + token;
+        emailService.sendSimpleMessage(userEmail, "Password recovery", msg);
     }
 
     public void updatePassword(User user, String password) {
