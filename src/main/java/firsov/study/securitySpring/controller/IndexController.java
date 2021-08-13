@@ -7,6 +7,7 @@ import firsov.study.securitySpring.exception.UserNotFoundException;
 import firsov.study.securitySpring.model.Permission;
 import firsov.study.securitySpring.model.Role;
 import firsov.study.securitySpring.model.User;
+import firsov.study.securitySpring.service.TokenService;
 import firsov.study.securitySpring.service.UserService;
 import firsov.study.securitySpring.util.SecurityUser;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
 import java.util.Collection;
 import java.util.List;
@@ -41,6 +43,8 @@ public class IndexController {
 
     @Autowired
     private UserService userService;
+    @Autowired
+    private TokenService tokenService;
 
     @GetMapping
     public String index() {
@@ -100,4 +104,37 @@ public class IndexController {
         model.addAttribute("message", "Check your email!");
         return "forgetPassword";
     }
+
+    @GetMapping("/changePassword")
+    public String changePassword(@Valid @NotNull @RequestParam("token") String token, Model model){
+        if (token == null) {
+            return "redirect:/login";
+        }
+        String result = tokenService.validatePasswordResetToken(token);
+        if(result != null) {
+            return "redirect:/login";
+        } else {
+            model.addAttribute("token", token);
+            return "resetPswd";
+        }
+    }
+
+    @PostMapping("/changePassword")
+    public String processChangePassword(@RequestParam("token") String token, @Valid @Min(5) @NotNull @RequestParam("password") String password, Model model){
+        String result = tokenService.validatePasswordResetToken(token);
+        if(result != null) {
+            return "redirect:/login";
+        } else {
+            User user;
+            try {
+                user = tokenService.getUserByToken(token);
+            } catch (UserNotFoundException e) {
+                return "redirect:/login";
+            }
+            userService.updatePassword(user, password);
+            return "redirect:/login";
+
+        }
+    }
+
 }
